@@ -7,7 +7,7 @@ import com.example.admin_service.entity.Admin;
 import com.example.admin_service.entity.AdminPrincipal;
 import com.example.admin_service.exception.BadRequestException;
 import com.example.admin_service.services.AdminService;
-//import com.example.admin_service.services.ServiceProvidersService;
+import com.example.admin_service.services.ServiceProvidersService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -34,7 +34,7 @@ public class AdminController {
 
     private final AdminService adminService;
 
-//    private final ServiceProvidersService serviceProvidersService;
+    private final ServiceProvidersService serviceProvidersService;
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@Valid @RequestBody AdminLoginRequest request, BindingResult bindingResult) {
@@ -226,33 +226,86 @@ public class AdminController {
         }
     }
 
-//    @GetMapping("/all_service")
-//    @PreAuthorize("hasRole('ADMIN')")
-//    public ResponseEntity<AllServiceproviderResponse> getAllServiceProviders(Authentication authentication) {
-//        AllServiceproviderResponse response = serviceProvidersService.getAllServiceProviders();
-//        return ResponseEntity.ok(response);
-//    }
+    @GetMapping("/all_service")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> getAllServiceProviders(
+            Authentication authentication,
+            @RequestHeader("Authorization") String authHeader) {
+        try {
+            // Extract token from "Bearer <token>"
+            String token = authHeader.replace("Bearer ", "");
 
-//    @PutMapping("/providers/{providerId}/approve")
-//    @PreAuthorize("hasRole('ADMIN')")
-//    public ResponseEntity<String> approveService(@PathVariable Long providerId) {
-//        boolean response = serviceProvidersService.approveServiceProvider(providerId);
-//        if (response) {
-//            return ResponseEntity.ok("Approved");
-//        } else {
-//            return ResponseEntity.badRequest().body("Failed to approve");
-//        }
-//    }
-//    @PutMapping("/providers/{providerId}/reject")
-//    @PreAuthorize("hasRole('ADMIN')")
-//    public ResponseEntity<String> rejectService(@PathVariable Long providerId) {
-//        boolean response = serviceProvidersService.disapproveServiceProvider(providerId);
-//        if (response) {
-//            return ResponseEntity.ok("Approved");
-//        } else {
-//            return ResponseEntity.badRequest().body("Failed to approve");
-//        }
-//    }
+            AllServiceproviderResponse response = serviceProvidersService.getAllServiceProviders(token);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("Error fetching service providers: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiError("Failed to fetch service providers: " + e.getMessage(),
+                            HttpStatus.INTERNAL_SERVER_ERROR.value()));
+        }
+    }
+
+    @PutMapping("/providers/{providerId}/approve")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> approveService(
+            @PathVariable Long providerId,
+            Authentication authentication,
+            @RequestHeader("Authorization") String authHeader) {
+        try {
+            AdminPrincipal currentAdmin = (AdminPrincipal) authentication.getPrincipal();
+            log.info("Admin {} is approving service provider with ID: {}", currentAdmin.getEmail(), providerId);
+
+            // Extract token from "Bearer <token>"
+            String token = authHeader.replace("Bearer ", "");
+
+            boolean response = serviceProvidersService.approveServiceProvider(providerId, token);
+            if (response) {
+                Map<String, Object> responseMap = new HashMap<>();
+                responseMap.put("message", "Service provider approved successfully");
+                responseMap.put("providerId", providerId);
+                return ResponseEntity.ok(responseMap);
+            } else {
+                return ResponseEntity.badRequest()
+                        .body(new ApiError("Failed to approve service provider", HttpStatus.BAD_REQUEST.value()));
+            }
+        } catch (Exception e) {
+            log.error("Error approving service provider: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiError("Failed to approve service provider: " + e.getMessage(),
+                            HttpStatus.INTERNAL_SERVER_ERROR.value()));
+        }
+    }
+
+    @PutMapping("/providers/{providerId}/reject")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> rejectService(
+            @PathVariable Long providerId,
+            Authentication authentication,
+            @RequestHeader("Authorization") String authHeader) {
+        try {
+            AdminPrincipal currentAdmin = (AdminPrincipal) authentication.getPrincipal();
+            log.info("Admin {} is rejecting service provider with ID: {}", currentAdmin.getEmail(), providerId);
+
+            // Extract token from "Bearer <token>"
+            String token = authHeader.replace("Bearer ", "");
+
+            boolean response = serviceProvidersService.disapproveServiceProvider(providerId, token);
+            if (response) {
+                Map<String, Object> responseMap = new HashMap<>();
+                responseMap.put("message", "Service provider rejected successfully");
+                responseMap.put("providerId", providerId);
+                return ResponseEntity.ok(responseMap);
+            } else {
+                return ResponseEntity.badRequest()
+                        .body(new ApiError("Failed to reject service provider", HttpStatus.BAD_REQUEST.value()));
+            }
+        } catch (Exception e) {
+            log.error("Error rejecting service provider: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiError("Failed to reject service provider: " + e.getMessage(),
+                            HttpStatus.INTERNAL_SERVER_ERROR.value()));
+        }
+    }
 
 
 }
