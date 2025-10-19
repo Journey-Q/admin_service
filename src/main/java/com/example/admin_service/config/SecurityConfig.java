@@ -41,6 +41,12 @@ public class SecurityConfig {
                         .requestMatchers("/service/auth/signup", "/service/auth/login", "/service/auth/test").permitAll()
                         .requestMatchers("/admin/auth/login", "/admin/auth/test", "/admin/auth/setup").permitAll()
 
+                        // TripFluencer Points - Public endpoints (accessible by all users)
+                        .requestMatchers("/admin/auth/points/settings", "/admin/auth/points/settings/**").permitAll()
+                        .requestMatchers("/admin/auth/tripfluencer-points/user/**").permitAll()
+                        .requestMatchers("/admin/auth/redemptions/user/**").permitAll()
+                        .requestMatchers("/admin/auth/redemptions").permitAll()
+
                         // Service Provider endpoints
                         .requestMatchers("/service/auth/profile").hasAnyRole("HOTEL", "TOUR_GUIDE", "TRAVEL_AGENT")
 
